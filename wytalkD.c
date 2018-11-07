@@ -32,50 +32,70 @@ int main(){
       perror("accept_connection()");
       return -1;
    }
-   printf("wytalkD.c fd=%d\n", newsockfd);
+   else{
+      printf("Connection established!\n");
+   }
+   // printf("wytalkD.c fd=%d\n", newsockfd);
    while(keepReading>0){
       printf("Inside the while loop.\n");
       char bufferRead[256];
-      // memset(bufferRead, 0, 256);
-      // char bufferWrite[256];
-      int rtnr = 255;
+      int rtnr;
       int rtnw;
-      // rtnr initialised as -1.
-     // while(rtnr == 255){
-         memset(bufferRead, 0, 256);
-         rtnr = read(newsockfd, bufferRead, 255);
-         printf("rtnr = %d\n", rtnr);
-         if(rtnr<0){
-            perror("read()");
-            keepReading = -1;
-            break;
-         }else if(rtnr>0){
-            printf("reached the printing part\n");
-            printf("%s\n",bufferRead); 
-         }
-     // }
-      rtnr = -1;
-      //while(rtnr != 0){
-         printf("Reached the part where it reads from stdin\n");
+      int run =1;
+      // Next few lines are for the server to read the socket for input from client.
+      while(run>0){
+      printf("Reached the printing section.\n");
+      //memset(bufferRead, 0, 256);
+      rtnr = read(newsockfd, bufferRead, 255);
+      printf("rtnr = %d\n", rtnr);
+      if(rtnr<0){
+         perror("read()");
+         keepReading = -1;
+         break;
+      }else if(rtnr>0){
+         printf("reached the printing part\n");
+         printf("%s",bufferRead);
+         //fflush(stdout);
+         if (rtnr < 256){
+            memset(bufferRead, 0, 256);
+            run = -1;
+         } 
+      }
+      else{
+         run = -1;
+      }
+      }
+      run = 1;
+      // Next few lines are the code to write to the socket the input the server gives.
+      // printf("Reached the part where it reads from stdin\n");
+      if(keepReading>0){
+         while(run>0){
          memset(bufferRead, 0, 256);
          // 255 here to prevent overflows.
-         //rtnr = read(0,bufferRead, 255);
-         //if(rtnr<0){
-         if(fgets(bufferRead, 255, stdin) == NULL){
+         if((rtnr = read(0, bufferRead, 1)) < 0){
             perror("read() from stdin");
             keepReading = -1;
-        //    break;
-         }else{
-            // if(rtnr>0){
+            break;
+         }else if (rtnr > 0){
             printf("bufferRead = %s\n",bufferRead);
-            rtnw = write(newsockfd, bufferRead, strlen(bufferRead));
+            rtnw = write(newsockfd, bufferRead, 1);
             if(rtnw < 0){
                perror("write() to socket.");
                keepReading = -1;
-               //break;
+               break;
+            }
+            if(bufferRead[0] == '\n'){
+               write(newsockfd, 0, 1);
+               memset(bufferRead, 0, 256);
+               printf("Reached the newline char\n");
+               run = -1;
             }
          }
-      //}
+         //else{
+           // run = -1;
+         //}
+         }
+      }
 
       if(keepReading<0){
          printf("Seems like there is an error. Socket could possibly be closed by client.\n");
@@ -83,6 +103,8 @@ int main(){
    }
    shutdown(sockfd, 2);
    shutdown(newsockfd, 2);
+   close(sockfd);
+   close(newsockfd);
    return 0;
 }
 
